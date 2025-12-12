@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13' and sys_platform == 'linux'",
@@ -1210,13 +1210,22 @@ pusht = [
 [[package]]
 name = "lerobot-hack"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
-    { name = "lerobot", extra = ["aloha", "feetech", "pusht"] },
+    { name = "lerobot", extra = ["aloha", "pusht"] },
+]
+
+[package.optional-dependencies]
+feetech = [
+    { name = "lerobot", extra = ["feetech"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "lerobot", extras = ["aloha", "feetech", "pusht"], specifier = ">=0.4.2" }]
+requires-dist = [
+    { name = "lerobot", extras = ["aloha", "pusht"], specifier = ">=0.4.2" },
+    { name = "lerobot", extras = ["feetech"], marker = "extra == 'feetech'", specifier = ">=0.4.2" },
+]
+provides-extras = ["feetech"]
 
 [[package]]
 name = "lxml"
