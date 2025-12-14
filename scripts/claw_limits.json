@@ -1,0 +1,6 @@
+{
+  "servo_id": 6,
+  "min_position": 1970,
+  "max_position": 2610,
+  "range": 640
+}
