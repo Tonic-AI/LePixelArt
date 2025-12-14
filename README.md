@@ -6,5 +6,10 @@
 
 **Team:** 26-30
 
-video : https://youtube.com/shorts/OrA4qn8cc9o?feature=share
-models and data : https://hf.co/lepixelart
+- **video** : https://youtube.com/shorts/OrA4qn8cc9o?feature=share
+- **models and data** : https://hf.co/lepixelart
+
+### Important information
+
+- we used a custom implementation of `opencv` to avoid camera timeouts during episode reccordings
+- we produce 5 models and 6 datasets
