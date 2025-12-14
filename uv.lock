@@ -1212,6 +1212,7 @@ name = "lerobot-hack"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "feetech-servo-sdk" },
     { name = "lerobot", extra = ["aloha", "pusht"] },
 ]
 
@@ -1222,6 +1223,7 @@ feetech = [
 
 [package.metadata]
 requires-dist = [
+    { name = "feetech-servo-sdk", specifier = ">=1.0.0" },
     { name = "lerobot", extras = ["aloha", "pusht"], specifier = ">=0.4.2" },
     { name = "lerobot", extras = ["feetech"], marker = "extra == 'feetech'", specifier = ">=0.4.2" },
 ]

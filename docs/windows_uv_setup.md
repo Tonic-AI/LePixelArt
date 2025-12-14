@@ -56,13 +56,19 @@ Follow the same process as the follower arm.
 
 **Follower:**
 ```powershell
-uv run lerobot-calibrate --robot.type=so101_follower --robot.port=COM6
+uv run lerobot-calibrate --robot.type=so101_follower --robot.port=COM10 --robot.id=my_awesome_follower_arm
 ```
+
+Replace `COM10` with your follower arm's port and give it a unique name.
 
 **Leader:**
 ```powershell
-uv run lerobot-calibrate --teleop.type=so101_leader --teleop.port=COM7
+uv run lerobot-calibrate --teleop.type=so101_leader --teleop.port=COM7 --teleop.id=my_awesome_leader_arm
 ```
+
+Replace `COM7` with your leader arm's port and give it a unique name.
+
+> **Note:** If you see a `Lock` error, you may need to unplug and replug the power to the arm.
 
 ## Resetting/Re-registering Motors
 
@@ -117,7 +123,30 @@ uv run lerobot-setup-motors --robot.type=so101_follower --robot.port=COM6
 uv run lerobot-setup-motors --teleop.type=so101_leader --teleop.port=COM7
 ```
 
-## Troubleshooting: "Motor not found" Error
+## Troubleshooting: Motor Detection Errors
+
+### IndexError: list index out of range
+
+If you get `IndexError: list index out of range` during motor setup (especially during `broadcast_ping()`), this means the motor communication failed:
+
+**What it means:**
+- The code tried to communicate with the motor but got an empty or incomplete response
+- This is a communication failure, not necessarily a hardware failure
+
+**Quick fixes:**
+1. **Check connections**: Ensure only ONE motor is connected, 3-pin cable is firm, power is on
+2. **Retry**: Run the setup command again - it should resume from where it stopped
+3. **Power cycle**: Unplug/replug power supply and USB cable, wait a few seconds
+4. **Test with diagnostic**: `uv run python diagnose_motor.py COM7` (replace with your port)
+5. **Try different motor**: Skip to the next motor to see if it's motor-specific
+
+**If it persists:**
+- The motor may have a non-standard baudrate
+- Try running PowerShell as Administrator
+- Check Device Manager for COM port issues
+- The motor may need to be reset or replaced
+
+### RuntimeError: Motor not found
 
 If you get `RuntimeError: Motor 'gripper' (model 'sts3215') was not found`, check the following:
 
@@ -211,12 +240,122 @@ While unlikely, if you're using `uv`, ensure the virtual environment has all dep
 uv pip install pyserial
 ```
 
+## Step 5: Find Camera Index
+
+Before recording datasets, you need to identify your camera's index:
+
+```powershell
+uv run lerobot-find-cameras opencv
+```
+
+This will list all available cameras with their indices. Note the index number (typically `0`, `1`, `2`, etc.) for your camera.
+
+**Example output:**
+```
+Camera 0: USB Camera
+Camera 1: Integrated Webcam
+```
+
+Use the index number in the camera configuration when teleoperating or recording.
+
+## Step 6: Test Teleoperation (Optional but Recommended)
+
+Test that both arms work together before recording:
+
+**Basic teleoperation (without camera):**
+```powershell
+uv run lerobot-teleoperate `
+    --robot.type=so101_follower `
+    --robot.port=COM10 `
+    --robot.id=my_awesome_follower_arm `
+    --teleop.type=so101_leader `
+    --teleop.port=COM7 `
+    --teleop.id=my_awesome_leader_arm
+```
+
+**Teleoperation with camera:**
+```powershell
+uv run lerobot-teleoperate `
+    --robot.type=so101_follower `
+    --robot.port=COM10 `
+    --robot.id=my_awesome_follower_arm `
+    --robot.cameras="{top: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}}" `
+    --teleop.type=so101_leader `
+    --teleop.port=COM7 `
+    --teleop.id=my_awesome_leader_arm `
+    --display_data=true
+```
+
+Replace `index_or_path: 0` with your camera's index from Step 5.
+
+> **Note:** In PowerShell, use backticks (`) for line continuation, or put everything on one line.
+
+## Step 7: Record Dataset
+
+Once everything is working, you can record your dataset. The leader arm will control the follower arm to perform actions that get recorded.
+
+### 7.1: Setup Hugging Face (if not already done)
+
+If you haven't used Hugging Face Hub before, you'll need to login:
+
+```powershell
+# Set your Hugging Face token (get it from https://huggingface.co/settings/tokens)
+$env:HUGGINGFACE_TOKEN="your_token_here"
+
+# Login to Hugging Face
+uv run huggingface-cli login --token $env:HUGGINGFACE_TOKEN --add-to-git-credential
+```
+
+Get your username:
+```powershell
+uv run huggingface-cli whoami
+```
+
+### 7.2: Record Dataset
+
+**Example recording command:**
+```powershell
+uv run lerobot-record `
+    --robot.type=so101_follower `
+    --robot.port=COM10 `
+    --robot.id=my_awesome_follower_arm `
+    --robot.cameras="{top: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}}" `
+    --teleop.type=so101_leader `
+    --teleop.port=COM7 `
+    --teleop.id=my_awesome_leader_arm `
+    --display_data=true `
+    --dataset.repo_id=YOUR_HF_USERNAME/record-test `
+    --dataset.num_episodes=60 `
+    --dataset.episode_time_s=20 `
+    --dataset.reset_time_s=10 `
+    --dataset.single_task="pickup the cube and place it to the bin" `
+    --dataset.root=$env:USERPROFILE\so101_dataset\
+```
+
+**Parameters explained:**
+- `--dataset.num_episodes=60`: Number of teleoperation sessions to record
+- `--dataset.episode_time_s=20`: Duration of each episode in seconds
+- `--dataset.reset_time_s=10`: Time between episodes to reset the environment
+- `--dataset.single_task`: Description of the task being performed
+- `--dataset.root`: Where to save the dataset locally (Windows path format)
+- `--dataset.repo_id`: Your Hugging Face username/repository name
+
+**Important:**
+- Replace `YOUR_HF_USERNAME` with your actual Hugging Face username
+- Replace `index_or_path: 0` with your camera's index
+- Adjust episode time and reset time based on your task complexity
+- Use `Ctrl+C` to stop recording early
+- Use `--resume=true` to continue recording if interrupted
+
+The terminal will show logs when episodes start, reset, and when recording completes.
+
 ## Important Notes
 
 - On Windows, use `COM6`, `COM7`, etc. (not `/dev/tty...`)
-- Make sure only ONE motor is connected to the controller board at each step
+- Make sure only ONE motor is connected to the controller board at each step during motor setup
 - Check your power supply and USB cables are properly connected
 - If using Waveshare controller board, ensure jumpers are set on the `B` channel (USB)
 - The motor must be powered to be detected by the script
 - **Run PowerShell as Administrator** if you encounter permission errors
+- Use backticks (`) for line continuation in PowerShell, or put commands on a single line
 
